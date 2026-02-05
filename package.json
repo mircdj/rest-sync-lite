@@ -1,0 +1,29 @@
+{
+  "name": "rest-sync-lite",
+  "version": "0.0.1",
+  "description": "A Zero-Dependency library for offline-first REST synchronization using IndexedDB.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "rest",
+    "offline",
+    "indexeddb",
+    "sync",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
+    "happy-dom": "^20.5.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

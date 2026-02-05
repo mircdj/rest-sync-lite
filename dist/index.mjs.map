@@ -1,0 +1,1 @@
+{"version":3,"sources":["../src/index.ts"],"names":["version","init"],"mappings":"AAAO,IAAMA,CAAAA,CAAU,QAEhB,SAASC,CAAAA,EAAO,CACnB,OAAA,CAAQ,GAAA,CAAI,4BAA4B,EAC5C","file":"index.mjs","sourcesContent":["export const version = '0.0.1';\r\n\r\nexport function init() {\r\n    console.log('REST-Sync-Lite initialized');\r\n}\r\n"]}
