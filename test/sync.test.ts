@@ -65,5 +65,33 @@ describe('SyncEngine', () => {
         expect(next).toBeUndefined(); // Removed
     });
 
+    it('should not double-encode body if already string', async () => {
+        const payload = JSON.stringify({ key: 'value' });
+        await queue.enqueueRequest({
+            url: '/api/string-body',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // Simulate what happens when main.ts passes a stringified body
+            body: payload as any
+        });
+
+        // Mock fetch to capture the body sent
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({})
+        });
+        global.fetch = fetchMock;
+
+        await sync.startSync();
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        const callArgs = fetchMock.mock.calls[0];
+        const init = callArgs[1] as RequestInit;
+
+        // Body should exactly match the input payload (not double stringified)
+        expect(init.body).toBe(payload);
+    });
+
     // Note: Testing transient error wait times might be slow, mocking timers recommended for full suite
 });

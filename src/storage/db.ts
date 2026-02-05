@@ -129,3 +129,16 @@ export function count(): Promise<number> {
         request.onerror = () => reject(request.error);
     });
 }
+
+export function updateItem<T>(key: IDBValidKey, value: T): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (!dbInstance) return reject(new Error('Database not initialized'));
+
+        const transaction = dbInstance.transaction(currentStoreName, 'readwrite');
+        const store = transaction.objectStore(currentStoreName);
+        const request = store.put(value, key);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}

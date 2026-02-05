@@ -7,6 +7,7 @@ import { RequestItem } from '../queue/types';
 export interface SyncConfig {
     refreshToken?: () => Promise<void>;
     maxRetries?: number;
+    backoffFactor?: number;
 }
 
 type SyncEvents = {
@@ -55,7 +56,7 @@ export class SyncEngine {
                     await this.processRequest(item);
                     // Success: remove from queue
                     await this.queue.dequeueRequest(key);
-                    this.events.emit('request-success', { id: item.id, response: 'OK' }); // Should capture real fetch response
+                    this.events.emit('request-success', { id: item.id, response: 'OK' });
                 } catch (error: any) {
                     // Handle specific errors
                     if (error.status === 401 && this.config.refreshToken) {
@@ -65,9 +66,7 @@ export class SyncEngine {
                             await this.config.refreshToken();
                             continue; // Retry same item immediately
                         } catch (refreshErr) {
-                            // If refresh fails, permanent fail? or retry?
-                            console.error('Refresh token failed', refreshErr);
-                            // Treat as permanent for now to avoid death loop
+                            console.error('Refresh token failed, marking request as permanent error:', item.id, refreshErr);
                             await this.queue.dequeueRequest(key);
                             this.events.emit('request-error', { id: item.id, error: refreshErr, permanent: true });
                             continue;
@@ -76,38 +75,28 @@ export class SyncEngine {
 
                     if (this.isPermanentError(error)) {
                         // Permanent error (400, 404, etc)
+                        console.error('Permanent error, discarding request:', item.id, error);
                         await this.queue.dequeueRequest(key);
                         this.events.emit('request-error', { id: item.id, error, permanent: true });
                     } else {
                         // Transient error (5xx, Network)
-                        const retries = item.retryCount || 0;
+                        item.retryCount = (item.retryCount || 0) + 1;
                         const maxRetries = this.config.maxRetries || 5;
 
-                        if (retries >= maxRetries) {
+                        if (item.retryCount > maxRetries) {
+                            console.error(`Max retries (${maxRetries}) exceeded for request:`, item.id, error);
                             await this.queue.dequeueRequest(key);
                             this.events.emit('request-error', { id: item.id, error, permanent: true }); // Give up
                         } else {
-                            // Calculate wait
-                            const waitTime = calculateBackoff(retries);
-                            console.log(`Transient error. Retrying in ${waitTime}ms...`);
+                            // Transient error - Persist retry count
+                            await this.queue.updateRequest(key, item);
 
-                            // Update retry count in DB? 
-                            // Current QueueManager doesn't support update. 
-                            // Ideally we should update the item retryCount.
-                            // For now, we just wait and retry loop. 
-                            // NOTE: To strictly follow spec "Increment retryCount nel DB", we need updateItem support.
-                            // Assuming we can't update easily without adding an update method to DB/Queue.
-                            // Let's implement a wait and hold. 
+                            const delay = calculateBackoff(item.retryCount, this.config.backoffFactor || 1000);
+                            console.warn(`Transient error. Retrying in ${delay}ms...`, error);
 
-                            await new Promise(r => setTimeout(r, waitTime));
-                            // Note: we haven't updated retryCount in DB, so if app restarts backoff resets.
-                            // Ideally QueueManager should have updateRequest(key, changes).
-
-                            // Increment locally for this loop if we can't persist?
-                            // But requirements say "Incrementa retryCount nel DB". 
-                            // Proceeding as is for MVP but flagging this constraint.
+                            // Wait before next loop iteration
+                            await new Promise(resolve => setTimeout(resolve, delay));
                         }
-                        // For strict DB update we would need an update method in QueueManager/DBAdapter.
                     }
                 }
             }
@@ -117,11 +106,10 @@ export class SyncEngine {
     }
 
     private async processRequest(item: RequestItem) {
-        // Real fetch implementation
         const response = await fetch(item.url, {
             method: item.method,
             headers: item.headers,
-            body: item.body ? JSON.stringify(item.body) : undefined
+            body: typeof item.body === 'string' ? item.body : (item.body ? JSON.stringify(item.body) : undefined)
         });
 
         if (!response.ok) {

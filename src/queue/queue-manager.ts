@@ -1,4 +1,4 @@
-import { initDB, addItem, peekItem, removeItem } from '../storage/db';
+import { initDB, addItem, peekItem, removeItem, updateItem } from '../storage/db';
 import { generateUUID } from '../utils/uuid';
 import { RequestItem } from './types';
 
@@ -63,5 +63,10 @@ export class QueueManager {
     async dequeueRequest(key: IDBValidKey): Promise<void> {
         await this.init();
         await removeItem(key);
+    }
+
+    async updateRequest(key: IDBValidKey, item: RequestItem): Promise<void> {
+        await this.init();
+        await updateItem(key, item);
     }
 }

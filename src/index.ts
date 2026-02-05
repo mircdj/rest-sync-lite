@@ -85,6 +85,10 @@ export class RestSyncLite {
     async syncNow() {
         return this.engine.startSync();
     }
+
+    get syncEngine() {
+        return this.engine;
+    }
 }
 
 export * from './queue/types';
