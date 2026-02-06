@@ -3,7 +3,8 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
     entry: {
         'index': 'src/index.ts',
-        'react': 'src/react/index.ts'
+        'react': 'src/react/index.ts',
+        'sw': 'src/sw/index.ts',
     },
     external: ['react'],
     format: ['cjs', 'esm'],

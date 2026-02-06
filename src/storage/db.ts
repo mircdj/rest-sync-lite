@@ -217,3 +217,32 @@ export function removeByField(field: string, value: any): Promise<boolean> {
         request.onerror = () => reject(request.error);
     });
 }
+
+/**
+ * Clears all items from the store.
+ */
+export function clearStore(): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (!dbInstance) return resolve(); // Or reject? For tests, resolve is fine if not init.
+
+        const transaction = dbInstance.transaction(currentStoreName, 'readwrite');
+        const store = transaction.objectStore(currentStoreName);
+        const request = store.clear();
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+/**
+ * Closes and deletes the database.
+ */
+export function deleteDB(dbName: string): Promise<void> {
+    closeDB();
+    return new Promise((resolve, reject) => {
+        if (typeof indexedDB === 'undefined') return resolve();
+        const request = indexedDB.deleteDatabase(dbName);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve();
+    });
+}

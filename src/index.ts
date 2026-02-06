@@ -125,6 +125,17 @@ export class RestSyncLite {
             id: init?.id
         });
 
+        // Register Background Sync if supported and we are offline (or just always to be safe)
+        if ('serviceWorker' in navigator && 'SyncManager' in window && !this.network.isOnline()) {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                // @ts-ignore - SyncManager is not yet in all TS libs standard
+                await registration.sync.register('rest-sync-queue');
+            } catch (err) {
+                console.warn('Background Sync registration failed:', err);
+            }
+        }
+
         return new Response(JSON.stringify({ status: 'queued', offline: true, id }), {
             status: 202,
             statusText: 'Accepted',

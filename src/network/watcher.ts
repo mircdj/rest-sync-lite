@@ -9,18 +9,23 @@ export class NetworkWatcher {
     private _isOnline: boolean = true;
 
     constructor() {
-        if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+        if (typeof window !== 'undefined') {
             this._isOnline = navigator.onLine;
-
             window.addEventListener('online', () => this.updateState(true));
             window.addEventListener('offline', () => this.updateState(false));
+        } else if (typeof self !== 'undefined' && typeof navigator !== 'undefined') {
+            // Service Worker context
+            this._isOnline = navigator.onLine;
+            // SW doesn't always have 'online' events same as window, but safe to check
         }
     }
 
     isOnline(): boolean {
         // Allow mocking via a static or global if needed, or just trust navigator
-        if ((window as any)._forceOffline) return false;
-        if ((window as any)._forceOnline) return true;
+        if (typeof window !== 'undefined') {
+            if ((window as any)._forceOffline) return false;
+            if ((window as any)._forceOnline) return true;
+        }
 
         if (typeof navigator !== 'undefined') {
             return navigator.onLine;
