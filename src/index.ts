@@ -79,18 +79,23 @@ export class RestSyncLite {
         const url = typeof input === 'string' ? input : input.url;
         const method = init?.method?.toUpperCase() || 'GET';
 
+        // 1. ESTRAZIONE: Separiamo le nostre proprietà da quelle standard
+        // Destrutturiamo 'priority' e 'id' per evitare che finiscano nella fetch nativa
+        const { priority, id, ...standardInit } = init || {};
+
         if (this.network.isOnline()) {
             try {
-                // We need to cast init back to RequestInit because we Omitted priority.
-                // However, window.fetch accepts RequestInit.
-                // Our init matches except for the priority type mismatch if passed.
-                // But native fetch might ignore unknown properties or handle them.
-                // Safest to cast as RequestInit or pass only standard props if we were strict.
-                // Casting as any for compatibility.
-                const response = await window.fetch(input, init as any);
+                // We pass only the standard properties to the native fetch
+                const response = await window.fetch(input, standardInit);
+
+                // Server errors (5xx) still require queuing
+                if (response.status >= 500) {
+                    return this.enqueueAndMock(url, method, init);
+                }
+
                 return response;
             } catch (err) {
-                // Network error?
+                // Network error (e.g. timeout or DNS failed)
                 console.warn('Network request failed, queueing...', err);
                 return this.enqueueAndMock(url, method, init);
             }
