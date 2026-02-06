@@ -1,5 +1,5 @@
 import { QueueManager } from '../queue/queue-manager';
-import { SyncEngine, SyncConfig } from '../engine/sync';
+import { SyncEngine, type SyncConfig } from '../engine/sync';
 import { NetworkWatcher } from '../network/watcher';
 
 /**

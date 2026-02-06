@@ -11,6 +11,16 @@ Perfect for **Mobile Web Apps**, **PWAs**, **Field Service Apps**, and Enterpris
 
 ---
 
+<p align="center">
+  <a href="https://mircdj.github.io/rest-sync-lite/">
+    <img src="https://img.shields.io/badge/🎮_Live_Demo-Try_it_Now-success?style=for-the-badge&logo=github" alt="Live Demo" height="40"/>
+  </a>
+  <br>
+  <b>Check out the <a href="https://mircdj.github.io/rest-sync-lite/">Interactive Playground</a> to see Background Sync and Offline Simulator in action!</b>
+</p>
+
+---
+
 ## ✨ Key Features
 
 *   📦 **Zero Runtime Dependencies:** Written in pure native TypeScript. No bloat (no `axios`, `lodash`, `idb`).
@@ -22,6 +32,9 @@ Perfect for **Mobile Web Apps**, **PWAs**, **Field Service Apps**, and Enterpris
 *   📂 **File Support:** Native support for persistent `Blob`, `File`, and `FormData` uploads.
 *   ⚡️ **Priority Queue:** Prioritize critical requests (`high`) over background tasks (`low`).
 *   🚫 **Cancellable:** Cancel queued requests on demand.
+*   📡 **PWA & Background Sync:** Fully integrated with the **Web Background Sync API** to finish uploads even after the browser is closed.
+*   🔔 **Event-Driven UI:** Seamlessly integrates with toast notifications and UI feedback via a unified event system.
+*   🚀 **Production Ready Demo:** A professional playground to test complex offline scenarios and binary uploads.
 *   🌐 **Framework Agnostic:** Works seamlessly with Angular, Vue, Svelte, or Vanilla JS.
 
 ---
@@ -58,6 +71,22 @@ export const apiSync = new RestSyncLite({
 ### 2. Usage in your App
 
 Replace your native `fetch` calls with `apiSync.fetch`. The signature is identical to `window.fetch`.
+
+## 🎮 Interactive Playground
+
+We've built a "Killer Demo" to showcase what `rest-sync-lite` can do. It's a full PWA that demonstrates:
+
+*   **Network Simulation**: Toggle "Simulate Offline" to queue requests without disconnecting your Wi-Fi.
+*   **Real-time Monitoring**: Watch the queue grow and drain in real-time.
+*   **Background Sync**: Queue a request, close the tab, and watch it sync when you reopen (Service Worker magic).
+
+👉 **[Try the Live Demo](https://mircdj.github.io/rest-sync-lite/)** or run it locally:
+
+```bash
+cd playground
+npm install
+npm run dev
+```
 
 ```typescript
 // Example 1: Saving a form (Simple JSON)
@@ -155,7 +184,33 @@ function StatusBadge() {
 }
 ```
 
-### 4. Events
+### 4. Background Synchronization (PWA Support) 📡
+
+**rest-sync-lite** supports the [Web Background Sync API](https://developer.mozilla.org/en-US/docs/Web/API/Background_Synchronization_API). This allows your app to synchronize data even if the user closes the tab or the browser, as soon as the connectivity is restored.
+
+#### Step 1: Register the Service Worker helper
+In your `service-worker.js` (or `sw.ts`), import and initialize the background sync listener:
+
+```javascript
+// In your service-worker.js
+import { initRestSyncServiceWorker } from 'rest-sync-lite/sw';
+
+initRestSyncServiceWorker({
+  maxRetries: 10, // You can use a different config for background sync
+  // Important: refreshToken logic in SW must not use DOM APIs (window/document)
+  refreshToken: async () => {
+     /* background-safe auth logic */
+  }
+});
+```
+
+#### Step 2: How it works
+The library automatically detects if the browser supports BackgroundSync.
+
+*   **Chrome/Edge/Android:** If the user is offline, it registers a sync tag. The browser will "wake up" your Service Worker to send the data even if the site is closed.
+*   **Safari/Firefox:** Since they don't support the Background Sync API yet, the library gracefully falls back to standard synchronization as soon as the app is reopened.
+
+### 5. Events
 
 You can force a synchronization manually if needed (e.g., when the user clicks a "Sync Now" button), although the library listens for online events automatically.
 
@@ -184,9 +239,25 @@ The `RestSyncLite` constructor accepts a configuration object:
 1.  **Intercept**: The request is analyzed.
 2.  **Check**: If **ONLINE**, it attempts a direct send.
 3.  **Fallback**: If **OFFLINE** or request fails (network error), it serializes the request.
-4.  **Persist**: The serialized request is stored in IndexedDB (Object Store).
-5.  **Sync**: A `NetworkWatcher` detects connection restoration and triggers the `SyncEngine`.
-6.  **Process**: The engine processes the queue (FIFO), handles retries, and manages 401 token expiration loops.
+4.  **Register (PWA)**: If supported, registers a **Background Sync** task for the Service Worker.
+5.  **Persist**: The serialized request is stored in IndexedDB (Object Store).
+6.  **Sync (Main Thread)**: A `NetworkWatcher` detects connection restoration and triggers the `SyncEngine`.
+7.  **Sync (Background)**: The Browser wakes up the Service Worker to process the queue via `processQueueInBackground`.
+
+```mermaid
+graph TD
+    A[App Request] --> B{Online?}
+    B -- Yes --> C[Direct Fetch]
+    B -- No --> D[Serialize & Store in IDB]
+    D --> E{BG Sync Supported?}
+    E -- Yes --> F[Register Sync Tag]
+    E -- No --> G[Wait for Online Event]
+    F --> H((Browser BG Process))
+    H --> I[Wake Service Worker]
+    I --> J[Process Queue from IDB]
+    G --> K[Main Thread Sync]
+    K --> J
+```
 
 ---
 
@@ -205,3 +276,13 @@ Pull Requests are welcome!
 ## 📄 License
 
 Distributed under the MIT License.
+
+---
+
+## 🗺️ Roadmap
+
+We are constantly improving `rest-sync-lite`. Here is what's coming next:
+
+- [ ] **Vue.js & Angular Wrappers**: First-class support for other popular frameworks.
+- [ ] **SQLite / OPFS Adapters**: Alternative storage engines for extremely large datasets.
+- [ ] **Compression**: Gzip/Brotli compression for synchronized payloads.

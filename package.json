@@ -34,6 +34,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
+    "build:demo": "npm run build && cd playground && npm install && npm run build",
     "test": "vitest",
     "type-check": "tsc --noEmit",
     "prepublishOnly": "npm run build"

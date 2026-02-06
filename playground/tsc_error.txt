@@ -1,0 +1,1 @@
+../src/sw/index.ts(2,22): error TS1484: 'SyncConfig' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.

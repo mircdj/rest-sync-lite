@@ -1,6 +1,9 @@
-node_modules
-dist
-.DS_Store
-*.tgz
-.env.
-playground/
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+playground/dist/
+examples/*/dist/
