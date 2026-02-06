@@ -239,6 +239,20 @@ await apiSync.syncNow();
 | `isSyncing` | `boolean` | Whether the sync engine is currently processing the queue. |
 | `queueSize` | `number` | Number of pending requests in the queue. |
 
+### Events
+
+Listen to events using `apiSync.events.on('eventName', callback)`.
+
+| Event | Payload Type | Description |
+| :--- | :--- | :--- |
+| `network:change` | `boolean` | Triggered when network status changes (true=online). |
+| `queue:update` | `void` | Fired when queue size changes (enqueue/dequeue). |
+| `sync:start` | `void` | Synchronization process started. |
+| `sync:end` | `void` | Synchronization process finished. |
+| `request-success` | `{ id, response, item }` | A queued request was sent successfully. `item` contains original request data. |
+| `request-error` | `{ id, error, permanent, item }` | A queued request failed. `permanent` is true if max retries exceeded. |
+| `request:cancelled` | `string` (id) | A request was manually cancelled. |
+
 ### Example: Queue Visualization
 
 ```typescript

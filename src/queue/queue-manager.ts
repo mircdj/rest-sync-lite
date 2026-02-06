@@ -21,8 +21,7 @@ export class QueueManager {
     async init(): Promise<void> {
         if (!this.initialized) {
             this.initialized = initDB(DB_NAME, STORE_NAME).then(async () => {
-                this._queueSize = await count();
-                this.events.emit('queue:update', undefined);
+                await this.syncSize();
             });
         }
         return this.initialized;
@@ -57,8 +56,7 @@ export class QueueManager {
         };
 
         await addItem(item);
-        this._queueSize++; // Optimistic update
-        this.events.emit('queue:update', undefined);
+        await this.syncSize();
         return id;
     }
 
@@ -97,8 +95,7 @@ export class QueueManager {
     async dequeueRequest(key: IDBValidKey): Promise<void> {
         await this.init();
         await removeItem(key);
-        this._queueSize = Math.max(0, this._queueSize - 1);
-        this.events.emit('queue:update', undefined);
+        await this.syncSize();
     }
 
     /**
@@ -117,8 +114,7 @@ export class QueueManager {
         await this.init();
         const result = await removeByField('id', requestId);
         if (result) {
-            this._queueSize = Math.max(0, this._queueSize - 1);
-            this.events.emit('queue:update', undefined);
+            await this.syncSize();
         }
         return result;
     }
@@ -129,7 +125,20 @@ export class QueueManager {
     async getAllItems(): Promise<RequestItem[]> {
         await this.init();
         const results = await getAllItems<RequestItem>();
+        // Also sync size just in case
+        await this.syncSize();
         return results.map(r => r.value);
     }
-}
 
+    /**
+     * Synchronizes internal size counter with actual DB count.
+     */
+    private async syncSize() {
+        try {
+            this._queueSize = await count();
+            this.events.emit('queue:update', undefined);
+        } catch (e) {
+            console.error('Failed to sync queue size', e);
+        }
+    }
+}

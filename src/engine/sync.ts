@@ -11,8 +11,8 @@ export interface SyncConfig {
 }
 
 type SyncEvents = {
-    'request-success': { id: string; response: any };
-    'request-error': { id: string; error: any; permanent: boolean };
+    'request-success': { id: string; response: any; item: RequestItem };
+    'request-error': { id: string; error: any; permanent: boolean; item: RequestItem };
     'queue-empty': void;
     'sync:start': void;
     'sync:end': void;
@@ -63,7 +63,7 @@ export class SyncEngine {
                     await this.processRequest(item);
                     // Success: remove from queue
                     await this.queue.dequeueRequest(key);
-                    this.events.emit('request-success', { id: item.id, response: 'OK' });
+                    this.events.emit('request-success', { id: item.id, response: 'OK', item });
                 } catch (error: any) {
                     // Handle specific errors
                     if (error.status === 401 && this.config.refreshToken) {
@@ -75,7 +75,7 @@ export class SyncEngine {
                         } catch (refreshErr) {
                             console.error('Refresh token failed, marking request as permanent error:', item.id, refreshErr);
                             await this.queue.dequeueRequest(key);
-                            this.events.emit('request-error', { id: item.id, error: refreshErr, permanent: true });
+                            this.events.emit('request-error', { id: item.id, error: refreshErr, permanent: true, item });
                             continue;
                         }
                     }
@@ -84,7 +84,7 @@ export class SyncEngine {
                         // Permanent error (400, 404, etc)
                         console.error('Permanent error, discarding request:', item.id, error);
                         await this.queue.dequeueRequest(key);
-                        this.events.emit('request-error', { id: item.id, error, permanent: true });
+                        this.events.emit('request-error', { id: item.id, error, permanent: true, item });
                     } else {
                         // Transient error (5xx, Network)
                         item.retryCount = (item.retryCount || 0) + 1;
@@ -93,7 +93,7 @@ export class SyncEngine {
                         if (item.retryCount > maxRetries) {
                             console.error(`Max retries (${maxRetries}) exceeded for request:`, item.id, error);
                             await this.queue.dequeueRequest(key);
-                            this.events.emit('request-error', { id: item.id, error, permanent: true }); // Give up
+                            this.events.emit('request-error', { id: item.id, error, permanent: true, item }); // Give up
                         } else {
                             // Transient error - Persist retry count
                             await this.queue.updateRequest(key, item);

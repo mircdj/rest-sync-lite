@@ -193,8 +193,9 @@ export default function App() {
 
     // Listeners
     useEffect(() => {
-        const hSuccess = ({ id }: any) => {
-            toast.success(`Request synced!`, { id: `s-${id}` });
+        const hSuccess = ({ id, item }: any) => {
+            const priorityLabel = item?.priority ? `[${item.priority.toUpperCase()}] ` : '';
+            toast.success(`${priorityLabel}Request synced!`, { id: `s-${id}` });
             addLog(`✓ Request ${id} synced successfully`, 'success');
         };
         const hError = ({ id, permanent }: any) => {
@@ -207,8 +208,13 @@ export default function App() {
             toast.loading('Syncing queued requests...', { id: 'sync-status' });
         };
         const hSyncEnd = () => {
+            // The queueSize update will happen automatically via useRestSync hook
+            // which listens to 'queue:update', triggered by SyncEngine -> QueueManager -> syncSize()
             addLog('✓ Synchronization completed', 'success');
             toast.success('Sync complete!', { id: 'sync-status' });
+
+            // Force refresh queue list one last time
+            refreshQueue();
         };
 
         apiSync.events.on('request-success', hSuccess);

@@ -5,7 +5,7 @@ import type { SyncConfig } from './engine/sync';
 import { QueueManager } from './queue/queue-manager';
 import { NetworkWatcher } from './network/watcher';
 
-import type { Priority } from './queue/types';
+import type { Priority, RequestItem } from './queue/types';
 
 // Omit 'priority' from RequestInit because it conflicts with our custom Priority type
 // (Native priority is 'high' | 'low' | 'auto', ours is 'high' | 'normal' | 'low')
@@ -24,8 +24,8 @@ type RestSyncEvents = {
     'queue:update': void;
     'sync:start': void;
     'sync:end': void;
-    'request-success': { id: string; response: any };
-    'request-error': { id: string; error: any; permanent: boolean };
+    'request-success': { id: string; response: any; item: RequestItem };
+    'request-error': { id: string; error: any; permanent: boolean; item: RequestItem };
     'request:cancelled': string;
 };
 
