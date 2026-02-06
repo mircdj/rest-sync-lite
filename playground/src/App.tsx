@@ -186,7 +186,7 @@ export default function App() {
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-4 md:p-8 font-sans transition-colors duration-300">
             <Toaster position="bottom-right" toastOptions={{ className: 'dark:bg-slate-800 dark:text-white', duration: 4000 }} />
 
-            <header className="max-w-[1600px] mx-auto mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <header className="w-full px-4 lg:px-12 xl:px-20 mx-auto mb-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent flex items-center gap-3">
                         <Cloud className="w-10 h-10 text-blue-600" />
@@ -201,7 +201,7 @@ export default function App() {
                 </div>
             </header>
 
-            <main className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+            <main className="w-full px-4 lg:px-12 xl:px-20 mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
                 {/* --- LEFT COLUMN: STATUS --- */}
                 <div className="lg:col-span-3 space-y-6">
