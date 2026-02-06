@@ -7,6 +7,7 @@ type NetworkEvents = {
 export class NetworkWatcher {
     private events = new EventEmitter<NetworkEvents>();
     private _isOnline: boolean = true;
+    private _forcedOffline: boolean = false;
 
     constructor() {
         if (typeof window !== 'undefined') {
@@ -21,16 +22,31 @@ export class NetworkWatcher {
     }
 
     isOnline(): boolean {
-        // Allow mocking via a static or global if needed, or just trust navigator
-        if (typeof window !== 'undefined') {
-            if ((window as any)._forceOffline) return false;
-            if ((window as any)._forceOnline) return true;
-        }
+        if (this._forcedOffline) return false;
 
+        // Trust navigator
         if (typeof navigator !== 'undefined') {
             return navigator.onLine;
         }
         return true;
+    }
+
+    /**
+     * Manually overrides network state.
+     * @param enabled If true, forces offline mode. If false, restores real network state.
+     */
+    setOfflineMode(enabled: boolean) {
+        if (this._forcedOffline === enabled) return;
+        this._forcedOffline = enabled;
+
+        // Force state update based on new forced mode + real network state
+        const realState = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
+        // If enabling offline mode -> we become offline (false)
+        // If disabling custom offline mode -> we revert to real state
+        const targetState = enabled ? false : realState;
+
+        this.updateState(targetState);
     }
 
     onNetworkChange(listener: (isOnline: boolean) => void) {
@@ -38,9 +54,22 @@ export class NetworkWatcher {
     }
 
     private updateState(isOnline: boolean) {
-        if (this._isOnline !== isOnline) {
-            this._isOnline = isOnline;
-            this.events.emit('network-change', isOnline);
+        // If forced offline, and the incoming event says we are online, ignore it.
+        // UNLESS this updateState call comes from setOfflineMode itself?
+        // Actually, if _forcedOffline is true, we should NEVER emit online.
+
+        // If we are forced offline, the effective state is FALSE.
+        // If an event comes in saying "true" (real network online), but _forcedOffline is true, 
+        // effectively we are still offline. So we should NOT update _isOnline to true.
+
+        let effectiveState = isOnline;
+        if (this._forcedOffline) {
+            effectiveState = false;
+        }
+
+        if (this._isOnline !== effectiveState) {
+            this._isOnline = effectiveState;
+            this.events.emit('network-change', effectiveState);
         }
     }
 }

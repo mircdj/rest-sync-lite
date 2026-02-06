@@ -10,7 +10,7 @@ export function initRestSyncServiceWorker(config: SyncConfig = {}) {
     // @ts-ignore - ServiceWorkerGlobalScope type issues in some setups
     self.addEventListener('sync', (event: any) => {
         if (event.tag === 'rest-sync-queue') {
-            console.log('[RestSyncLite] Background Sync triggered');
+            // console.debug('[RestSyncLite] Background Sync triggered');
             event.waitUntil(processQueueInBackground(config));
         }
     });
@@ -25,8 +25,8 @@ async function processQueueInBackground(config: SyncConfig) {
 
     const engine = new SyncEngine(queue, network, config);
 
-    // Monitor events just for logging
-    engine.events.on('request-success', ({ id }) => console.log(`[RestSyncLite] BG Sync: Request ${id} success`));
+    // Monitor events just for logging - keeping error logs if critical, debug logs commented
+    // engine.events.on('request-success', ({ id }) => console.debug(`[RestSyncLite] BG Sync: Request ${id} success`));
     engine.events.on('request-error', ({ id, error }) => console.error(`[RestSyncLite] BG Sync: Request ${id} failed`, error));
 
     await queue.init();

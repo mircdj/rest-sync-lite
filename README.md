@@ -230,6 +230,7 @@ await apiSync.syncNow();
 | `syncNow()` | `Promise<void>` | Manually triggers synchronization of all pending requests. |
 | `cancelRequest(id)` | `Promise<boolean>` | Cancels a pending request by its ID. Returns `true` if found and removed. |
 | `getQueueItems()` | `Promise<RequestItem[]>` | Returns all pending requests in the queue. Useful for UI visualization. |
+| `setOfflineMode(enabled)` | `void` | Manually overrides network state (true=offline). Useful for testing or "Pause Sync". |
 
 ### Properties (via React Hook or direct access)
 

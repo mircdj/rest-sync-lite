@@ -68,7 +68,7 @@ export class SyncEngine {
                     // Handle specific errors
                     if (error.status === 401 && this.config.refreshToken) {
                         // Token expired
-                        console.log('Token expired, refreshing...');
+                        // console.debug('Token expired, refreshing...');
                         try {
                             await this.config.refreshToken();
                             continue; // Retry same item immediately
@@ -99,7 +99,7 @@ export class SyncEngine {
                             await this.queue.updateRequest(key, item);
 
                             const delay = calculateBackoff(item.retryCount, this.config.backoffFactor || 1000);
-                            console.warn(`Transient error. Retrying in ${delay}ms...`, error);
+                            // console.warn(`Transient error. Retrying in ${delay}ms...`, error);
 
                             // Wait before next loop iteration
                             await new Promise(resolve => setTimeout(resolve, delay));

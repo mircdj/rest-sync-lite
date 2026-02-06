@@ -172,6 +172,15 @@ export class RestSyncLite {
         return this.queue.getAllItems();
     }
 
+    /**
+     * Manually forces the library to behave as if offline.
+     * Useful for "Data Saver" modes or testing.
+     * @param enabled If true, forces offline mode. If false, restores real network state.
+     */
+    setOfflineMode(enabled: boolean) {
+        this.network.setOfflineMode(enabled);
+    }
+
     get syncEngine() {
         return this.engine;
     }

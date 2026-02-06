@@ -238,13 +238,15 @@ export default function App() {
     const toggleOffline = () => {
         const newState = !simulatedOffline;
         setSimulatedOffline(newState);
-        (window as any)._forceOffline = newState;
-        window.dispatchEvent(new Event(newState ? 'offline' : 'online'));
+
+        // Use the new public API
+        apiSync.setOfflineMode(newState);
+
+        addLog(newState ? '🔌 Simulation: Forced Offline Mode' : '🔌 Simulation: Reverting to Real Network', 'info');
         toast(newState ? 'Simulated Offline Mode' : 'Back Online', {
             icon: newState ? '🔌' : '🌍',
             style: { background: newState ? '#333' : '#fff', color: newState ? '#fff' : '#000' }
         });
-        addLog(newState ? '🔌 Offline mode enabled' : '🌍 Online mode restored', 'warn');
     };
 
     const sendRequest = async (e: React.FormEvent) => {
