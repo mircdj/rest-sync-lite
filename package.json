@@ -1,6 +1,6 @@
 {
   "name": "@mircdj/rest-sync-lite",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A Zero-Dependency library for offline-first REST synchronization using IndexedDB.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -11,6 +11,19 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "require": "./dist/react.cjs"
+    }
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
     }
   },
   "sideEffects": false,
@@ -46,8 +59,10 @@
   },
   "homepage": "https://github.com/mircdj/rest-sync-lite#readme",
   "devDependencies": {
+    "@types/react": "^19.2.13",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.5.0",
+    "react": "^19.2.4",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"

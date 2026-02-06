@@ -14,13 +14,15 @@ type SyncEvents = {
     'request-success': { id: string; response: any };
     'request-error': { id: string; error: any; permanent: boolean };
     'queue-empty': void;
+    'sync:start': void;
+    'sync:end': void;
 };
 
 export class SyncEngine {
     private queue: QueueManager;
     private network: NetworkWatcher;
     public events = new EventEmitter<SyncEvents>();
-    private isSyncing = false;
+    private _isSyncing = false;
     private config: SyncConfig;
 
     constructor(queue: QueueManager, network: NetworkWatcher, config: SyncConfig = {}) {
@@ -36,11 +38,16 @@ export class SyncEngine {
         });
     }
 
+    get isSyncing() {
+        return this._isSyncing;
+    }
+
     async startSync() {
-        if (this.isSyncing) return;
+        if (this._isSyncing) return;
         if (!this.network.isOnline()) return;
 
-        this.isSyncing = true;
+        this._isSyncing = true;
+        this.events.emit('sync:start', undefined);
 
         try {
             while (this.network.isOnline()) {
@@ -101,7 +108,8 @@ export class SyncEngine {
                 }
             }
         } finally {
-            this.isSyncing = false;
+            this._isSyncing = false;
+            this.events.emit('sync:end', undefined);
         }
     }
 

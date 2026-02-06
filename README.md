@@ -18,7 +18,8 @@ Perfect for **Mobile Web Apps**, **PWAs**, **Field Service Apps**, and Enterpris
 *   🔄 **FIFO Queue & Sequential Processing:** Guarantees that requests are executed strictly in the order they were created.
 *   🛡️ **Smart Retry Policy:** Exponential backoff to handle server overloads (5xx) and intelligent handling of fatal errors (4xx).
 *   🔐 **Auth-Aware:** Supports automatic session refreshing if a token expires (401) during synchronization.
-*   🌐 **Framework Agnostic:** Works seamlessly with React, Angular, Vue, Svelte, or Vanilla JS.
+*   ⚛️ **React Ready:** Built-in hooks for real-time connection and sync status monitoring.
+*   🌐 **Framework Agnostic:** Works seamlessly with Angular, Vue, Svelte, or Vanilla JS.
 
 ---
 
@@ -80,7 +81,32 @@ async function saveOrder(orderData: any) {
 }
 ```
 
-### 3. Events
+### 3. Usage with React
+
+**rest-sync-lite** provides a built-in hook to make your UI reactive to network capability and sync status.
+
+```tsx
+import { RestSyncLite } from '@mircdj/rest-sync-lite';
+import { useRestSync } from '@mircdj/rest-sync-lite/react';
+
+// Recommended: Initialize singleton in a separate file (e.g., api.ts)
+const apiSync = new RestSyncLite({ /* config */ });
+
+function StatusBadge() {
+  // ⚡️ Automatically re-renders when online/offline or syncing changes
+  const { isOnline, isSyncing, queueSize } = useRestSync(apiSync);
+
+  return (
+    <div className={`badge ${isOnline ? 'online' : 'offline'}`}>
+      {isOnline ? 'ONLINE' : 'OFFLINE'}
+      {isSyncing && <span> (Syncing...)</span>}
+      {queueSize > 0 && <span className="counter">{queueSize} Pending</span>}
+    </div>
+  );
+}
+```
+
+### 4. Events
 
 You can force a synchronization manually if needed (e.g., when the user clicks a "Sync Now" button), although the library listens for online events automatically.
 

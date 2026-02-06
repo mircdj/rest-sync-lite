@@ -1,5 +1,6 @@
 import { QueueManager } from './queue/queue-manager';
 import { NetworkWatcher } from './network/watcher';
+import { EventEmitter } from './utils/events';
 import { SyncEngine } from './engine/sync';
 import type { SyncConfig } from './engine/sync';
 
@@ -8,20 +9,61 @@ export interface RestSyncConfig extends SyncConfig {
     networkWatcher?: NetworkWatcher;
 }
 
+type RestSyncEvents = {
+    'network:change': boolean;
+    'queue:update': void;
+    'sync:start': void;
+    'sync:end': void;
+    // Forwarded from engine but maybe not critical for hook? 
+    // User requested specifically those 4 above to be emitted.
+    // But hooks might want errors too. For now let's stick to the list.
+    'request-success': { id: string; response: any };
+    'request-error': { id: string; error: any; permanent: boolean };
+};
+
 export class RestSyncLite {
     private queue: QueueManager;
     private network: NetworkWatcher;
     private engine: SyncEngine;
+    public events = new EventEmitter<RestSyncEvents>();
 
     constructor(config: RestSyncConfig = {}) {
         this.queue = new QueueManager();
         this.network = config.networkWatcher || new NetworkWatcher();
         this.engine = new SyncEngine(this.queue, this.network, config);
 
-        // Initialize DB mainly for side effects or ensure it's ready, 
-        // though methods handle lazy init.
+        // Initialize DB
         this.queue.init().catch(err => console.error('Failed to init DB', err));
+
+        // Wire up events
+        this.network.onNetworkChange((isOnline) => {
+            this.events.emit('network:change', isOnline);
+        });
+
+        this.queue.events.on('queue:update', () => {
+            this.events.emit('queue:update', undefined);
+        });
+
+        this.engine.events.on('sync:start', () => this.events.emit('sync:start', undefined));
+        this.engine.events.on('sync:end', () => this.events.emit('sync:end', undefined));
+        this.engine.events.on('request-success', (p) => this.events.emit('request-success', p));
+        this.engine.events.on('request-error', (p) => this.events.emit('request-error', p));
     }
+
+    // --- Public Getters for Hook ---
+    get isOnline(): boolean {
+        return this.network.isOnline();
+    }
+
+    get isSyncing(): boolean {
+        return this.engine.isSyncing;
+    }
+
+    get queueSize(): number {
+        return this.queue.size;
+    }
+
+
 
     /**
      * Performs a fetch request. 
@@ -30,13 +72,6 @@ export class RestSyncLite {
     async fetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
         const url = typeof input === 'string' ? input : input.url;
         const method = init?.method?.toUpperCase() || 'GET';
-        // We only queue mutating requests usually, but spec says "intercetta chiamate HTTP". 
-        // Assuming we want to queue everything or maybe just non-GET? 
-        // Standard offline-first often only queues mutations. 
-        // For this exercise, let's queue everything if offline, but GETs might need data interaction.
-        // The prompt says "intercetta chiamate HTTP... le salva... sincronizza". 
-        // Usually implies mutations. If I queue a GET, I can't return data.
-        // Let's assume generic proxy. If I queue, I return 202.
 
         if (this.network.isOnline()) {
             try {

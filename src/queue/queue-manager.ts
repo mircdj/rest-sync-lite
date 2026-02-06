@@ -1,21 +1,35 @@
-import { initDB, addItem, peekItem, removeItem, updateItem } from '../storage/db';
+import { initDB, addItem, peekItem, removeItem, updateItem, count } from '../storage/db';
 import { generateUUID } from '../utils/uuid';
+import { EventEmitter } from '../utils/events';
 import type { RequestItem } from './types';
 
 const DB_NAME = 'rest-sync-lite';
 const STORE_NAME = 'request-queue';
 
+type QueueEvents = {
+    'queue:update': void;
+};
+
 export class QueueManager {
     private initialized: Promise<void> | null = null;
+    private _queueSize: number = 0;
+    public events = new EventEmitter<QueueEvents>();
 
     /**
      * Ensures the database is initialized.
      */
     async init(): Promise<void> {
         if (!this.initialized) {
-            this.initialized = initDB(DB_NAME, STORE_NAME);
+            this.initialized = initDB(DB_NAME, STORE_NAME).then(async () => {
+                this._queueSize = await count();
+                this.events.emit('queue:update', undefined);
+            });
         }
         return this.initialized;
+    }
+
+    get size(): number {
+        return this._queueSize;
     }
 
     /**
@@ -37,6 +51,8 @@ export class QueueManager {
         };
 
         await addItem(item);
+        this._queueSize++; // Optimistic update
+        this.events.emit('queue:update', undefined);
         return id;
     }
 
@@ -63,6 +79,8 @@ export class QueueManager {
     async dequeueRequest(key: IDBValidKey): Promise<void> {
         await this.init();
         await removeItem(key);
+        this._queueSize = Math.max(0, this._queueSize - 1);
+        this.events.emit('queue:update', undefined);
     }
 
     async updateRequest(key: IDBValidKey, item: RequestItem): Promise<void> {
