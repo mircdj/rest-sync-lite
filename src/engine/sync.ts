@@ -2,7 +2,7 @@ import { QueueManager } from '../queue/queue-manager';
 import { NetworkWatcher } from '../network/watcher';
 import { calculateBackoff } from '../utils/backoff';
 import { EventEmitter } from '../utils/events';
-import { RequestItem } from '../queue/types';
+import type { RequestItem } from '../queue/types';
 
 export interface SyncConfig {
     refreshToken?: () => Promise<void>;

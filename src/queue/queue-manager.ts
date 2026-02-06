@@ -1,6 +1,6 @@
 import { initDB, addItem, peekItem, removeItem, updateItem } from '../storage/db';
 import { generateUUID } from '../utils/uuid';
-import { RequestItem } from './types';
+import type { RequestItem } from './types';
 
 const DB_NAME = 'rest-sync-lite';
 const STORE_NAME = 'request-queue';

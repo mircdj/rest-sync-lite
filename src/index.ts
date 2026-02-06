@@ -1,6 +1,7 @@
 import { QueueManager } from './queue/queue-manager';
 import { NetworkWatcher } from './network/watcher';
-import { SyncEngine, SyncConfig } from './engine/sync';
+import { SyncEngine } from './engine/sync';
+import type { SyncConfig } from './engine/sync';
 
 export interface RestSyncConfig extends SyncConfig {
     dbName?: string;

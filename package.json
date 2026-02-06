@@ -1,24 +1,50 @@
 {
-  "name": "rest-sync-lite",
-  "version": "0.0.1",
+  "name": "@mircdj/rest-sync-lite",
+  "version": "1.0.0",
   "description": "A Zero-Dependency library for offline-first REST synchronization using IndexedDB.",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "sideEffects": false,
   "scripts": {
     "build": "tsup",
     "test": "vitest",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json",
+    "LICENSE"
+  ],
   "keywords": [
     "rest",
     "offline",
     "indexeddb",
     "sync",
-    "typescript"
+    "typescript",
+    "offline-first",
+    "local-first"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Mirco Sabatino <tua-email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mircdj/rest-sync-lite.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mircdj/rest-sync-lite/issues"
+  },
+  "homepage": "https://github.com/mircdj/rest-sync-lite#readme",
   "devDependencies": {
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.5.0",
