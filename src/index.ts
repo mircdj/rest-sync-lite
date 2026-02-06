@@ -1,8 +1,18 @@
-import { QueueManager } from './queue/queue-manager';
-import { NetworkWatcher } from './network/watcher';
+import { serializeBody } from './utils/serializer';
 import { EventEmitter } from './utils/events';
 import { SyncEngine } from './engine/sync';
 import type { SyncConfig } from './engine/sync';
+import { QueueManager } from './queue/queue-manager';
+import { NetworkWatcher } from './network/watcher';
+
+import type { Priority } from './queue/types';
+
+// Omit 'priority' from RequestInit because it conflicts with our custom Priority type
+// (Native priority is 'high' | 'low' | 'auto', ours is 'high' | 'normal' | 'low')
+export interface RestSyncRequestInit extends Omit<RequestInit, 'priority'> {
+    priority?: Priority;
+    id?: string;
+}
 
 export interface RestSyncConfig extends SyncConfig {
     dbName?: string;
@@ -14,11 +24,9 @@ type RestSyncEvents = {
     'queue:update': void;
     'sync:start': void;
     'sync:end': void;
-    // Forwarded from engine but maybe not critical for hook? 
-    // User requested specifically those 4 above to be emitted.
-    // But hooks might want errors too. For now let's stick to the list.
     'request-success': { id: string; response: any };
     'request-error': { id: string; error: any; permanent: boolean };
+    'request:cancelled': string;
 };
 
 export class RestSyncLite {
@@ -63,19 +71,23 @@ export class RestSyncLite {
         return this.queue.size;
     }
 
-
-
     /**
      * Performs a fetch request. 
      * If offline or network fails, queues the request and returns a mock 202 response.
      */
-    async fetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
+    async fetch(input: RequestInfo, init?: RestSyncRequestInit): Promise<Response> {
         const url = typeof input === 'string' ? input : input.url;
         const method = init?.method?.toUpperCase() || 'GET';
 
         if (this.network.isOnline()) {
             try {
-                const response = await window.fetch(input, init);
+                // We need to cast init back to RequestInit because we Omitted priority.
+                // However, window.fetch accepts RequestInit.
+                // Our init matches except for the priority type mismatch if passed.
+                // But native fetch might ignore unknown properties or handle them.
+                // Safest to cast as RequestInit or pass only standard props if we were strict.
+                // Casting as any for compatibility.
+                const response = await window.fetch(input, init as any);
                 return response;
             } catch (err) {
                 // Network error?
@@ -87,7 +99,7 @@ export class RestSyncLite {
         }
     }
 
-    private async enqueueAndMock(url: string, method: string, init?: RequestInit): Promise<Response> {
+    private async enqueueAndMock(url: string, method: string, init?: RestSyncRequestInit): Promise<Response> {
         // Normalize headers
         const headers: Record<string, string> = {};
         if (init?.headers) {
@@ -100,18 +112,20 @@ export class RestSyncLite {
             }
         }
 
-        // Read body
-        let body: any = init?.body;
-        // Ideally we should handle streams/blobs but for "Lite" assume JSON/Text string
+        // Read body and serialize
+        const body = serializeBody(init?.body);
 
-        await this.queue.enqueueRequest({
+        // Queue request
+        const id = await this.queue.enqueueRequest({
             url,
             method: method as any,
             headers,
-            body
+            body,
+            priority: init?.priority,
+            id: init?.id
         });
 
-        return new Response(JSON.stringify({ status: 'queued', offline: true }), {
+        return new Response(JSON.stringify({ status: 'queued', offline: true, id }), {
             status: 202,
             statusText: 'Accepted',
             headers: { 'Content-Type': 'application/json' }
@@ -120,6 +134,18 @@ export class RestSyncLite {
 
     async syncNow() {
         return this.engine.startSync();
+    }
+
+    /**
+     * Cancels a specific request by its ID.
+     * @param requestId The UUID of the request to cancel.
+     */
+    async cancelRequest(requestId: string): Promise<boolean> {
+        const result = await this.queue.cancelRequest(requestId);
+        if (result) {
+            this.events.emit('request:cancelled', requestId);
+        }
+        return result;
     }
 
     get syncEngine() {

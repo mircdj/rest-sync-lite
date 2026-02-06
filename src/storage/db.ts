@@ -24,12 +24,20 @@ export function initDB(dbName: string, storeName: string): Promise<void> {
             return resolve();
         }
 
-        const request = indexedDB.open(dbName, 1);
+        const request = indexedDB.open(dbName, 2); // Bump version to 2 for priority index
 
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
+            let store: IDBObjectStore;
+
             if (!db.objectStoreNames.contains(storeName)) {
-                db.createObjectStore(storeName, { autoIncrement: true });
+                store = db.createObjectStore(storeName, { autoIncrement: true });
+            } else {
+                store = (event.target as IDBOpenDBRequest).transaction!.objectStore(storeName);
+            }
+
+            if (!store.indexNames.contains('priority_idx')) {
+                store.createIndex('priority_idx', 'priority', { unique: false });
             }
         };
 
@@ -139,6 +147,73 @@ export function updateItem<T>(key: IDBValidKey, value: T): Promise<void> {
         const request = store.put(value, key);
 
         request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+/**
+ * Peeks the first item matching a specific priority using the index.
+ * @param priority The priority value to filter by ('high', 'normal', 'low').
+ * @returns The first matching item or undefined.
+ */
+export function peekFirstByPriority<T>(priority: string): Promise<{ id: IDBValidKey; value: T } | undefined> {
+    return new Promise((resolve, reject) => {
+        if (!dbInstance) return reject(new Error('Database not initialized'));
+
+        const transaction = dbInstance.transaction(currentStoreName, 'readonly');
+        const store = transaction.objectStore(currentStoreName);
+        if (!store.indexNames.contains('priority_idx')) {
+            // Fallback if index doesn't exist yet (shouldn't happen after upgrade)
+            return resolve(undefined);
+        }
+        const index = store.index('priority_idx');
+        const request = index.openCursor(IDBKeyRange.only(priority));
+
+        request.onsuccess = (event) => {
+            const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
+            if (cursor) {
+                resolve({ id: cursor.primaryKey, value: cursor.value as T });
+            } else {
+                resolve(undefined);
+            }
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+}
+
+/**
+ * Removes an item where a specific field matches a value.
+ * Uses a cursor to scan (inefficient for large datasets but fine for small queues without index).
+ * @returns Promise resolving to true if removed, false if not found.
+ */
+export function removeByField(field: string, value: any): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        if (!dbInstance) return reject(new Error('Database not initialized'));
+
+        const transaction = dbInstance.transaction(currentStoreName, 'readwrite');
+        const store = transaction.objectStore(currentStoreName);
+        const request = store.openCursor();
+        let found = false;
+
+        request.onsuccess = (event) => {
+            const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
+            if (cursor) {
+                if (cursor.value && cursor.value[field] === value) {
+                    const deleteReq = cursor.delete();
+                    deleteReq.onsuccess = () => {
+                        found = true;
+                        resolve(true);
+                    };
+                    deleteReq.onerror = () => reject(deleteReq.error);
+                } else {
+                    cursor.continue();
+                }
+            } else {
+                resolve(found);
+            }
+        };
+
         request.onerror = () => reject(request.error);
     });
 }

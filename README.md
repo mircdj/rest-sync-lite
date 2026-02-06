@@ -19,6 +19,9 @@ Perfect for **Mobile Web Apps**, **PWAs**, **Field Service Apps**, and Enterpris
 *   🛡️ **Smart Retry Policy:** Exponential backoff to handle server overloads (5xx) and intelligent handling of fatal errors (4xx).
 *   🔐 **Auth-Aware:** Supports automatic session refreshing if a token expires (401) during synchronization.
 *   ⚛️ **React Ready:** Built-in hooks for real-time connection and sync status monitoring.
+*   📂 **File Support:** Native support for persistent `Blob`, `File`, and `FormData` uploads.
+*   ⚡️ **Priority Queue:** Prioritize critical requests (`high`) over background tasks (`low`).
+*   🚫 **Cancellable:** Cancel queued requests on demand.
 *   🌐 **Framework Agnostic:** Works seamlessly with Angular, Vue, Svelte, or Vanilla JS.
 
 ---
@@ -57,29 +60,75 @@ export const apiSync = new RestSyncLite({
 Replace your native `fetch` calls with `apiSync.fetch`. The signature is identical to `window.fetch`.
 
 ```typescript
-// Example: Saving a form
+// Example 1: Saving a form (Simple JSON)
 async function saveOrder(orderData: any) {
   try {
-    // This call will be queued if you are offline!
-    // If offline, it returns a simulated 202 Accepted response.
     const response = await apiSync.fetch('https://api.example.com/v1/orders', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(orderData)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
+      priority: 'high' // ⚡️ Urgent request (v1.2.0+)
     });
-
-    if (response.ok) {
-        console.log('Order sent!');
-    } else if (response.status === 202) {
-        console.log('Order queued for background sync.');
-    }
+    // ...
   } catch (error) {
     console.error('Request failed:', error);
   }
 }
+
+// Example 2: File Uploads (Blob / FormData) (v1.2.0+)
+async function uploadAvatar(file: File) {
+  const formData = new FormData();
+  formData.append('avatar', file);
+
+  // Files are automatically stored in IndexedDB and retried properly!
+  await apiSync.fetch('https://api.example.com/v1/profile/avatar', {
+      method: 'POST',
+      body: formData,
+      // No Content-Type header needed for FormData, let browser handle boundary
+  });
+}
+
+// Example 3: Cancellable Requests (v1.2.0+)
+async function syncDataWithCancel() {
+    const customId = 'my-sync-job-123';
+    
+    // Pass a custom ID (optional)
+    await apiSync.fetch('https://api.example.com/v1/sync', {
+        method: 'POST',
+        id: customId, 
+        priority: 'low'
+    });
+
+    // ... later if user cancels ...
+    await apiSync.cancelRequest(customId);
+}
 ```
+
+### Advanced Usage
+
+#### Priority Queue ⚡️
+You can specify the priority of a request using the `priority` option. Requests are processed in this order:
+1. `high`
+2. `normal` (default)
+3. `low`
+
+```typescript
+apiSync.fetch('/api/logs', { method: 'POST', body: logs, priority: 'low' });
+apiSync.fetch('/api/alert', { method: 'POST', body: alert, priority: 'high' });
+```
+
+#### Cancellable Requests & Custom IDs 🚫
+You can assign a custom ID to a request to track or cancel it later.
+
+```typescript
+// 1. Enqueue with ID
+const response = await apiSync.fetch('/api/job', { id: 'job-123' });
+
+// 2. Cancel it (removes from Queue / DB)
+const cancelled = await apiSync.cancelRequest('job-123');
+if (cancelled) console.log('Request cancelled!');
+```
+
 
 ### 3. Usage with React
 

@@ -114,10 +114,14 @@ export class SyncEngine {
     }
 
     private async processRequest(item: RequestItem) {
+        // item.body is now pre-serialized (string, Blob, FormData, etc.)
+        // fetch accepts BodyInit, which includes all these types.
+        // We do NOT stringify here anymore because serializeBody handled it.
+
         const response = await fetch(item.url, {
             method: item.method,
             headers: item.headers,
-            body: typeof item.body === 'string' ? item.body : (item.body ? JSON.stringify(item.body) : undefined)
+            body: item.body as BodyInit // Cast because our type is broader/any
         });
 
         if (!response.ok) {
