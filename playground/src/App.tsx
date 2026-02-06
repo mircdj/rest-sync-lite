@@ -23,11 +23,15 @@ function App() {
     };
 
     useEffect(() => {
-        // Register SW
+        // Register SW with robust loading
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register(new URL('./sw.ts', import.meta.url), { type: 'module' })
-                .then(reg => console.log('SW Registered', reg))
-                .catch(err => console.error('SW Error', err));
+            window.addEventListener('load', () => {
+                // We configured Vite to output 'sw.js' at the root of dist
+                const swUrl = import.meta.env.BASE_URL + 'sw.js';
+                navigator.serviceWorker.register(swUrl, { type: 'module' })
+                    .then(reg => console.log('SW Registered', reg))
+                    .catch(err => console.error('SW Error', err));
+            });
         }
 
         // Internal Event Listeners for Toasts

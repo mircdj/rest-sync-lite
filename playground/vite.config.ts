@@ -22,5 +22,22 @@ export default defineConfig({
             // Allow serving files from one level up to the project root
             allow: ['..']
         }
+    },
+    build: {
+        assetsInlineLimit: 0,
+        rollupOptions: {
+            input: {
+                main: path.resolve(__dirname, 'index.html'),
+                sw: path.resolve(__dirname, 'src/sw.ts'),
+            },
+            output: {
+                entryFileNames: (assetInfo) => {
+                    return assetInfo.name === 'sw' ? 'sw.js' : 'assets/[name]-[hash].js';
+                }
+            }
+        }
+    },
+    worker: {
+        format: 'es',
     }
 });
