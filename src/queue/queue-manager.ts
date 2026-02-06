@@ -1,4 +1,4 @@
-import { initDB, addItem, peekItem, removeItem, updateItem, count, peekFirstByPriority } from '../storage/db';
+import { initDB, addItem, peekItem, removeItem, updateItem, count, peekFirstByPriority, getAllItems, removeByField } from '../storage/db';
 import { generateUUID } from '../utils/uuid';
 import { EventEmitter } from '../utils/events';
 import type { RequestItem } from './types';
@@ -115,12 +115,7 @@ export class QueueManager {
      */
     async cancelRequest(requestId: string): Promise<boolean> {
         await this.init();
-        // Since we don't have an index on 'id', we must scan.
-        // But for a queue, traversing is acceptable.
-        // We need a DB helper for this or we do it here if we expose DB execution?
-        // QueueManager shouldn't touch `dbInstance` directly.
-        // Let's rely on a new db helper.
-        const result = await import('../storage/db').then(m => m.removeByField('id', requestId));
+        const result = await removeByField('id', requestId);
         if (result) {
             this._queueSize = Math.max(0, this._queueSize - 1);
             this.events.emit('queue:update', undefined);
@@ -133,8 +128,7 @@ export class QueueManager {
      */
     async getAllItems(): Promise<RequestItem[]> {
         await this.init();
-        const { getAllItems: getAllFromDB } = await import('../storage/db');
-        const results = await getAllFromDB<RequestItem>();
+        const results = await getAllItems<RequestItem>();
         return results.map(r => r.value);
     }
 }
