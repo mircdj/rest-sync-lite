@@ -6,6 +6,7 @@ export default defineConfig({
     base: '/rest-sync-lite/', // GitHub Pages base URL
     plugins: [react()], // Moved plugins to the top level of defineConfig
     resolve: {
+        dedupe: ['react', 'react-dom'], // Fix for 'useState of null'
         alias: {
             'rest-sync-lite/react': path.resolve(__dirname, '../src/react/index.ts'),
             'rest-sync-lite/sw': path.resolve(__dirname, '../src/sw/index.ts'),
