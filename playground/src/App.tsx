@@ -134,22 +134,18 @@ export default function App() {
     const [isUploading, setIsUploading] = useState(false);
     const logScrollRef = useRef<HTMLDivElement>(null);
 
-    // Fetch queue items from IndexedDB
+    // Fetch queue items from IndexedDB using PUBLIC API
     const refreshQueue = useCallback(async () => {
         try {
-            // Access the internal queue manager through the sync engine
-            const engine = apiSync.syncEngine;
-            if (engine && (engine as any).queue) {
-                const items = await (engine as any).queue.getAllRequests();
-                setQueueItems(items.map((item: any) => ({
-                    id: item.id,
-                    url: item.url,
-                    method: item.method,
-                    priority: item.priority || 'normal',
-                    createdAt: item.createdAt,
-                    retryCount: item.retryCount || 0
-                })));
-            }
+            const items = await apiSync.getQueueItems();
+            setQueueItems(items.map((item: any) => ({
+                id: item.id,
+                url: item.url,
+                method: item.method,
+                priority: item.priority || 'normal',
+                createdAt: item.timestamp,
+                retryCount: item.retryCount || 0
+            })));
         } catch (err) {
             console.warn('Could not fetch queue items', err);
         }
@@ -171,16 +167,27 @@ export default function App() {
         refreshQueue();
     }, [refreshQueue]);
 
-    // Refresh queue on events
+    // Refresh queue on events + auto-poll every 2s during sync
     useEffect(() => {
         const refresh = () => {
             setTimeout(refreshQueue, 100); // Small delay to let DB update
         };
         apiSync.events.on('queue:update', refresh);
+        apiSync.events.on('sync:start', refresh);
         apiSync.events.on('sync:end', refresh);
+        apiSync.events.on('request-success', refresh);
+        apiSync.events.on('request-error', refresh);
+
+        // Auto-poll every 2 seconds for live updates
+        const interval = setInterval(refreshQueue, 2000);
+
         return () => {
             apiSync.events.off('queue:update', refresh);
+            apiSync.events.off('sync:start', refresh);
             apiSync.events.off('sync:end', refresh);
+            apiSync.events.off('request-success', refresh);
+            apiSync.events.off('request-error', refresh);
+            clearInterval(interval);
         };
     }, [refreshQueue]);
 
@@ -548,6 +555,15 @@ export default function App() {
                 {/* --- RIGHT COLUMN: LOGS --- */}
                 <div className="lg:col-span-4">
                     <Card title="Live Activity" className="h-[700px]" icon={Clock}>
+                        <div className="flex justify-between items-center mb-4 -mt-2">
+                            <span className="text-xs text-slate-400">{logs.length} entries</span>
+                            <button
+                                onClick={() => setLogs([])}
+                                className="text-xs text-slate-400 hover:text-rose-500 flex items-center gap-1 transition-colors"
+                            >
+                                <Trash2 className="w-3 h-3" /> Clear
+                            </button>
+                        </div>
                         <div ref={logScrollRef} className="flex-1 overflow-y-auto pr-2 space-y-2">
                             {logs.length === 0 && (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400 text-sm">

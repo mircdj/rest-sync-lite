@@ -220,6 +220,38 @@ await apiSync.syncNow();
 
 ---
 
+## 📖 API Reference
+
+### Core Methods
+
+| Method | Returns | Description |
+| :--- | :--- | :--- |
+| `fetch(input, init?)` | `Promise<Response>` | Drop-in replacement for native `fetch`. Queues if offline. |
+| `syncNow()` | `Promise<void>` | Manually triggers synchronization of all pending requests. |
+| `cancelRequest(id)` | `Promise<boolean>` | Cancels a pending request by its ID. Returns `true` if found and removed. |
+| `getQueueItems()` | `Promise<RequestItem[]>` | Returns all pending requests in the queue. Useful for UI visualization. |
+
+### Properties (via React Hook or direct access)
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `isOnline` | `boolean` | Current network status. |
+| `isSyncing` | `boolean` | Whether the sync engine is currently processing the queue. |
+| `queueSize` | `number` | Number of pending requests in the queue. |
+
+### Example: Queue Visualization
+
+```typescript
+// Display all pending requests in your UI
+const pendingRequests = await apiSync.getQueueItems();
+
+pendingRequests.forEach(req => {
+  console.log(`[${req.priority}] ${req.method} ${req.url} - Retries: ${req.retryCount}`);
+});
+```
+
+---
+
 ## ⚙️ Configuration
 
 The `RestSyncLite` constructor accepts a configuration object:

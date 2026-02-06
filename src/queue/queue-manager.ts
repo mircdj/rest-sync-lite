@@ -120,6 +120,22 @@ export class QueueManager {
         // We need a DB helper for this or we do it here if we expose DB execution?
         // QueueManager shouldn't touch `dbInstance` directly.
         // Let's rely on a new db helper.
-        return await import('../storage/db').then(m => m.removeByField('id', requestId));
+        const result = await import('../storage/db').then(m => m.removeByField('id', requestId));
+        if (result) {
+            this._queueSize = Math.max(0, this._queueSize - 1);
+            this.events.emit('queue:update', undefined);
+        }
+        return result;
+    }
+
+    /**
+     * Retrieves all items in the queue.
+     */
+    async getAllItems(): Promise<RequestItem[]> {
+        await this.init();
+        const { getAllItems: getAllFromDB } = await import('../storage/db');
+        const results = await getAllFromDB<RequestItem>();
+        return results.map(r => r.value);
     }
 }
+

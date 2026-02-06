@@ -164,6 +164,14 @@ export class RestSyncLite {
         return result;
     }
 
+    /**
+     * Returns all items currently in the queue.
+     * Useful for UI visualization of pending requests.
+     */
+    async getQueueItems() {
+        return this.queue.getAllItems();
+    }
+
     get syncEngine() {
         return this.engine;
     }
@@ -171,3 +179,4 @@ export class RestSyncLite {
 
 export * from './queue/types';
 export * from './engine/sync';
+

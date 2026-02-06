@@ -246,3 +246,31 @@ export function deleteDB(dbName: string): Promise<void> {
         request.onsuccess = () => resolve();
     });
 }
+
+/**
+ * Retrieves all items from the store.
+ * @returns Promise resolving to an array of all items with their keys.
+ */
+export function getAllItems<T>(): Promise<{ id: IDBValidKey; value: T }[]> {
+    return new Promise((resolve, reject) => {
+        if (!dbInstance) return reject(new Error('Database not initialized'));
+
+        const transaction = dbInstance.transaction(currentStoreName, 'readonly');
+        const store = transaction.objectStore(currentStoreName);
+        const request = store.openCursor();
+        const results: { id: IDBValidKey; value: T }[] = [];
+
+        request.onsuccess = (event) => {
+            const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
+            if (cursor) {
+                results.push({ id: cursor.key, value: cursor.value as T });
+                cursor.continue();
+            } else {
+                resolve(results);
+            }
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+}
+
